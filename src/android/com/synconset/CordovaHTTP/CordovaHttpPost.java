@@ -18,6 +18,9 @@ import com.github.kevinsawicki.http.HttpRequest;
 import com.github.kevinsawicki.http.HttpRequest.HttpRequestException;
  
 public class CordovaHttpPost extends CordovaHttp implements Runnable {
+
+    private static final String CONTENT_TYPE = "Content-Type";
+
     public CordovaHttpPost(String urlString, Map<?, ?> params, Map<String, String> headers, CallbackContext callbackContext) {
         super(urlString, params, headers, callbackContext);
     }
@@ -27,13 +30,23 @@ public class CordovaHttpPost extends CordovaHttp implements Runnable {
         try {
             HttpRequest request = HttpRequest.post(this.getUrlString());
             this.setupSecurity(request);
-            request.acceptCharset(CHARSET);
             request.headers(this.getHeaders());
-            request.form(this.getParams());
+
+            if(this.isJsonRequest(header)) {
+                request.acceptJson();
+                request.contentType(HttpRequest.CONTENT_TYPE_JSON);
+                request.send(new JSONObject(params).toString());
+            } else {
+                request.acceptCharset(CHARSET);
+                request.form(this.getParams());
+            }
+
             int code = request.code();
             String body = request.body(CHARSET);
+
             JSONObject response = new JSONObject();
             this.addResponseHeaders(request, response);
+
             response.put("status", code);
             if (code >= 200 && code < 300) {
                 response.put("data", body);
@@ -53,5 +66,11 @@ public class CordovaHttpPost extends CordovaHttp implements Runnable {
                 this.respondWithError("There was an error with the request");
             }
         }
+    }
+
+    private boolean isJsonRequest(Map<String, String> headers) {
+        String contentType = headers.get(CordovaHttpPost.CONTENT_TYPE);
+
+        return contentType != null && contentType.toLowerCase().contains("application/json");
     }
 }
