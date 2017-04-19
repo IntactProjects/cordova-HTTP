@@ -20,7 +20,18 @@
 }
 
 - (void)setRequestHeaders:(NSDictionary*)headers forManager:(AFHTTPSessionManager*)manager {
-    manager.requestSerializer = [AFHTTPRequestSerializer serializer];
+    NSString *contentType = [headers objectForKey:@"Content-Type"];
+    
+    if ([contentType rangeOfString:@"application/json"].location == NSNotFound) {
+        manager.requestSerializer = [AFHTTPRequestSerializer serializer];
+    } else {
+        manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    }
+    
+    [manager.requestSerializer.HTTPRequestHeaders enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+        [manager.requestSerializer setValue:obj forHTTPHeaderField:key];
+    }];
+    
     [headers enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
         [manager.requestSerializer setValue:obj forHTTPHeaderField:key];
     }];
